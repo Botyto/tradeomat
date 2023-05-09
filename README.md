@@ -1,2 +1,2 @@
-# tradeomat
-Trade-o-mat - Automated trading system
+# Trade-o-mat
+Automated trading system
