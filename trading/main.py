@@ -1,32 +1,30 @@
-from zipline.api import order_target, record, symbol
+print("Starting...")
 
+from zipline import run_algorithm
+import pandas as pd
+import pandas_datareader.data as web
 
-def initialize(context):
-    context.i = 0
-    context.asset = symbol('AAPL')
+import avg
 
+print("Loaded modules...")
 
-def handle_data(context, data):
-    # Skip first 300 days to get full windows
-    context.i += 1
-    if context.i < 300:
-        return
+start = pd.Timestamp('2014')
+end = pd.Timestamp('2018')
 
-    # Compute averages
-    # data.history() has to be called with the same params
-    # from above and returns a pandas dataframe.
-    short_mavg = data.history(context.asset, 'price', bar_count=100, frequency="1d").mean()
-    long_mavg = data.history(context.asset, 'price', bar_count=300, frequency="1d").mean()
+sp500 = web.DataReader('SP500', 'fred', start, end).SP500
+benchmark_returns = sp500.pct_change()
 
-    # Trading logic
-    if short_mavg > long_mavg:
-        # order_target orders as many shares as needed to
-        # achieve the desired number of shares.
-        order_target(context.asset, 100)
-    elif short_mavg < long_mavg:
-        order_target(context.asset, 0)
+print("Running...")
 
-    # Save values for later inspection
-    record(AAPL=data.current(context.asset, 'price'),
-           short_mavg=short_mavg,
-           long_mavg=long_mavg)
+result = run_algorithm(start=start,
+                       end=end,
+                       initialize=avg.initialize,
+                       handle_data=avg.handle_data,
+                       analyze=avg.analyze,
+                       capital_base=100000,
+                       benchmark_returns=benchmark_returns,
+                       bundle='quandl',
+                       data_frequency='daily')
+
+print("Finished!")
+print(result)

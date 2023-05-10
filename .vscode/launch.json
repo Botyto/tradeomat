@@ -5,21 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run main.py",
+            "name": "zipline backtest main.py",
             "type": "python",
+            "cwd": "${workspaceFolder}/trading",
             "python": "${workspaceFolder}/venv/Scripts/python.exe",
             "request": "launch",
-            "program": "trading/main.py",
-            "console": "integratedTerminal",
-            "justMyCode": false
-        },
-        {
-            "name": "pip install",
-            "type": "python",
-            "python": "${workspaceFolder}/venv/Scripts/python.exe",
-            "request": "launch",
-            "args": ["install", "-r", "${workspaceFolder}/trading/requirements.txt"],
-            "module": "pip",
+            "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": false
         }
