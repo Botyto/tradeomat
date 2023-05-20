@@ -6,18 +6,19 @@ class SymbolSentiment:
         self.symbol = symbol
         self.sentiment = sentiment
 
-import twitter
+import twitter.scraper
+import twitter.cache
 import backtrader as bt
 from backtrader.utils.py3 import with_metaclass
 class TwitterData(with_metaclass(bt.feed.MetaAbstractDataBase, SymbolSentiment)):
-    _scraper: twitter.TwitterScraper
+    _scraper: twitter.scraper.TwitterScraper
 
     def start(self):
-        self._scraper = twitter.TwitterScraper(warmup=True)
+        self._scraper = twitter.cache.MemoryCachedTwitterScraper(warmup=True)
 
     def _load(self):
         tweets = self._scraper.get_tweets("elonmusk")
-        pass
+        pass  # TODO implement
 
 
 import datetime
