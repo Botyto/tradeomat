@@ -45,7 +45,7 @@ class EventFeed(typing.Generic[T]):
         """
         Stops the feed.
         Called once after the last call to next().
-        Called after start_live() (note that start_live() may not be called if backtesting).
+        Note that start_live() may be called before this, but not after.
         """
         pass
     

@@ -18,7 +18,10 @@ class BarLiveFeed:
         self.interval = interval
 
     def start(self):
-        pass
+        """
+        Starts the live feed.
+        Called once before the first call to next().
+        """
 
     async def next(self) -> BarEvent|None:
         start = self.last_poll or datetime.utcnow()
@@ -30,7 +33,11 @@ class BarLiveFeed:
         return await self._fetch(target)
 
     def stop(self):
-        pass
+        """
+        Stops the live feed.
+        Called once after the last call to next().
+        Note that stop() will be called, even if start() was not.
+        """
 
     async def _fetch(self, target: datetime) -> BarEvent|None:
         raise NotImplementedError()

@@ -7,12 +7,20 @@ from engine.bar.event import BarEvent
 
 class BarHistory:
     def start(self):
+        """
+        Starts the history reading.
+        Called once before the first call to next().
+        """
         pass
 
     def next(self) -> BarEvent|None:
         raise NotImplementedError()
     
     def stop(self):
+        """
+        Stops the history reading.
+        Called once after the last call to next().
+        """
         pass
 
 
