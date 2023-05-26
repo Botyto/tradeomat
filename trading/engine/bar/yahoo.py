@@ -77,7 +77,14 @@ class YahooLiveFeed(BarLiveFeed):
         assert len(result["timestamp"]) == 1
         timestamp = result["timestamp"][0]
         quote = result["indicators"]["quote"][0]
-        return BarEvent(datetime.fromtimestamp(timestamp), quote["open"], quote["high"], quote["low"], quote["close"], quote["volume"])
+        return BarEvent(
+            timestamp=datetime.fromtimestamp(timestamp).replace(tzinfo=timezone.utc),
+            open=quote["open"],
+            high=quote["high"],
+            low=quote["low"],
+            close=quote["close"],
+            volume=quote["volume"],
+        )
 
 
 def make_feed(ticker: str, interval: YahooInterval):
