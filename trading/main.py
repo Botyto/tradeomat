@@ -1,16 +1,18 @@
-import asyncio
+import datetime
 
 import engine.engine
 import engine.data
-import engine.barfeed
-
-feed = engine.barfeed.BarFeed()
-feed.history = engine.barfeed.CsvBarHistory("../binance_btcusdt_day.csv")
+import engine.bar.yahoo as yahoo_bars
 
 data = engine.data.EventAggregator()
-data.feeds.append(feed)
+feed_1 = yahoo_bars.make_feed("AAPL", yahoo_bars.YahooInterval.MIN_1)
+data.feeds.append(feed_1)
+feed_2 = yahoo_bars.make_feed("EURUSD=X", yahoo_bars.YahooInterval.MIN_1)
+data.feeds.append(feed_2)
 
 eng = engine.engine.Engine()
 eng.aggregator = data
-task = eng.start()
-asyncio.get_event_loop().run_until_complete(task)
+# eng.start_timestamp = datetime.datetime(2010, 1, 1, tzinfo=datetime.timezone.utc)
+# eng.end_timestamp = datetime.datetime(2017, 1, 1, tzinfo=datetime.timezone.utc)
+eng.start_timestamp = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+task = eng.run()
