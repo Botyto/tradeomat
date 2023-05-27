@@ -7,7 +7,7 @@ ZERO_TIMEDELTA = timedelta()
 
 
 class BarLiveFeed:
-    LEEWAY = timedelta(seconds=1)
+    LEEWAY = timedelta(seconds=3)
 
     ticker: str
     interval: timedelta
@@ -25,8 +25,9 @@ class BarLiveFeed:
 
     async def next(self) -> BarEvent|None:
         start = self.last_poll or datetime.utcnow()
-        delay = self.interval - ((start - datetime.min) % self.interval)
-        target = start + delay - self.interval
+        until_end = self.interval - ((start - datetime.min) % self.interval)
+        target = start + until_end - self.interval
+        delay = target + self.interval - datetime.utcnow()
         if delay > ZERO_TIMEDELTA:
             await asyncio.sleep((delay + self.LEEWAY).total_seconds())
         self.last_poll = datetime.utcnow()

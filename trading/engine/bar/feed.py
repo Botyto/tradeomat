@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from engine.feed import EventFeed
 from engine.bar.event import BarEvent
 from engine.bar.history import BarHistory
@@ -30,6 +32,7 @@ class BarFeed(EventFeed[BarEvent]):
         self._try_stop_history()
         if self.live_feed is not None:
             self.live_feed.start()
+            self.live_since = self.live_since - ((self.live_since - datetime.min.replace(tzinfo=timezone.utc)) % self.live_feed.interval)
 
     def stop(self):
         self._try_stop_history()
