@@ -1,3 +1,4 @@
 backtrader
+bs4
 tornado
 updateable-zip-file

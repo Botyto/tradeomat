@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import hashlib
+import json
 import os
 import pickle
 import random
@@ -49,6 +50,9 @@ class HttpResponse:
 			http_error_msg = f"{self.status_code} Server Error: {self.status} for url: {self.url}"
 		if http_error_msg:
 			raise HttpError(http_error_msg)
+
+	def json(self):
+		return json.loads(self.text)
 
 
 class HttpClient:
