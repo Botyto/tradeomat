@@ -11,13 +11,11 @@ from collect.web import HttpClient
 NAMESPACE = "yahoo"
 
 
-class YahooHomepageScraper:
+class YahooArticleScraper:
     client: HttpClient
 
     def __init__(self, client: HttpClient|None = None):
-        if client is None:
-            client = HttpClient()
-        self.client = client
+        self.client = client or HttpClient()
 
     def _get_article_urls(self, homepage_html: str) -> typing.Set[str]:
         try:
@@ -94,19 +92,19 @@ class YahooHomepageScraper:
         return [self._get_article(url) for url in article_urls]
 
 
-class YahooNewsScraper:
+class YahooNewsCollector:
     HOMEPAGE_URL = "https://finance.yahoo.com/"
     LIVE_TOLERANCE = timedelta(minutes=5)
 
     reader: NewsReader
     writer: NewsWriter
-    scraper: YahooHomepageScraper
+    scraper: YahooArticleScraper
     wayback: WaybackScraper
 
     def __init__(self):
         self.reader = NewsReader(NAMESPACE)
         self.writer = NewsWriter(NAMESPACE)
-        self.scraper = YahooHomepageScraper()
+        self.scraper = YahooArticleScraper()
         self.wayback = WaybackScraper()
 
     def _collect_history(self, start: datetime, end: datetime):

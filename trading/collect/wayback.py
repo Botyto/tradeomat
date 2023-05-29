@@ -9,9 +9,7 @@ class WaybackScraper:
     client: HttpClient
 
     def __init__(self, client: HttpClient|None):
-        if client is None:
-            client = HttpClient()
-        self.client = client
+        self.client = client or HttpClient()
 
     def _parse_timestamp(self, timestamp: str):
         return datetime.strptime(timestamp, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)

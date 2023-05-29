@@ -1,3 +1,6 @@
+import collect.web
+collect.web.get_user_agents()
+
 import datetime
 
 import engine.engine

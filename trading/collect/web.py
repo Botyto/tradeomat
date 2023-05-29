@@ -1,3 +1,4 @@
+import bs4
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import hashlib
@@ -56,6 +57,7 @@ class HttpResponse:
 
 
 class HttpClient:
+	cookies: typing.Dict[str, str]
 	# thorttle
 	throttle_min: timedelta|None = None
 	throttle_max: timedelta|None = None
@@ -65,6 +67,9 @@ class HttpClient:
 	cache_namespace: str = "__httpcache"
 	cache_ttl: timedelta|None = None
 	user_agents: typing.List[str]|None = None
+
+	def __init__(self):
+		self.cookies = {}
 
 	def __cache_get(self, cache_path: str):
 		if not os.path.isfile(cache_path):
@@ -130,3 +135,63 @@ class HttpClient:
 			with open(cache_path, "wb") as fh:
 				pickle.dump(response, fh)
 		return response
+	
+	def update_cookies(self, response: HttpResponse):
+		set_cookies = response.headers.get("Set-Cookie")
+		if not set_cookies:
+			return
+		for set_cookie in set_cookies.split(","):
+			set_cookie = set_cookie.strip()
+			cookie_parts = set_cookie.split(";")
+			try:
+				cookie_name, cookie_value = cookie_parts[0].split("=")
+				self.cookies[cookie_name] = cookie_value
+			except ValueError:
+				pass
+
+
+class UserAgents:
+	PATH = os.path.join("data", "web", "useragents.txt")
+	LIFETIME = timedelta(days=31)
+
+	client: HttpClient
+
+	def __init__(self):
+		self.client = HttpClient()
+
+	def _is_fresh(self):
+		if not os.path.isfile(self.PATH):
+			return False
+		mtime = os.path.getmtime(self.PATH)
+		if datetime.now() - datetime.fromtimestamp(mtime) < self.LIFETIME:
+			return True
+
+	def _fetch_new(self):
+		random_url = "https://user-agents.net/random"
+		response = requests.post(random_url, data={"limit": 1000, "action": "generate"})
+		response.raise_for_status()
+		soup = bs4.BeautifulSoup(response.text, "html.parser")
+		return [list_item.text.strip() for list_item in soup.find("section").find("ol").find_all("li")]
+
+	def update(self):
+		if self._is_fresh():
+			return
+		user_agents = self._fetch_new()
+		os.makedirs(os.path.dirname(self.PATH), exist_ok=True)
+		with open(self.PATH, "wt", encoding="utf-8") as fh:
+			fh.writelines(ua + "\n" for ua in user_agents)
+		return True
+
+	def load(self):
+		self.update()
+		with open(self.PATH, "rt", encoding="utf-8") as fh:
+			return [l.strip() for l in fh.readlines()]
+
+
+USER_AGENTS = None
+def get_user_agents():
+	global USER_AGENTS
+	ua = UserAgents()
+	if ua.update() or not USER_AGENTS:
+		USER_AGENTS = ua.load()
+	return USER_AGENTS
