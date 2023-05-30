@@ -21,7 +21,7 @@ class Symbol:
     type: SymbolType
 
 
-class SymbolReader(BaseWriter):
+class SymbolReader(BaseReader):
     pass
 
 
