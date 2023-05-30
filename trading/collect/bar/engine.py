@@ -82,14 +82,14 @@ class BarReader(BaseReader):
 class BarWriter(BaseWriter):
     symbol: str
 
-    def __init__(self, namespace: str, symbol: str):
-        super().__init__(namespace)
+    def __init__(self, collector, namespace, symbol: str):
+        super().__init__(collector, namespace)
         self.symbol = symbol
 
     def store(self, freq: BarFrequency, bars: typing.List[Bar]):
         if not bars:
             return
-        path = os.path.join("data", "bars", self.namespace, self.symbol, f"{freq.value}.bar")
+        path = self.get_data_path(self.symbol, freq.value + ".bar")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         exists = os.path.isfile(path)
         with open(path, "ab") as fh:

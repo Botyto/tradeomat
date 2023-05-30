@@ -18,7 +18,7 @@ class SecGovCollector(BaseCollector):
     def __init__(self, client: HttpClient|None = None):
         super().__init__(timedelta(days=30))
         self.client = client or HttpClient()
-        self.writer = SymbolWriter(NAMESPACE)
+        self.writer = SymbolWriter(self, NAMESPACE)
 
     def _download(self):
         temp_fname = self.get_temp_path("secgov.zip")

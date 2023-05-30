@@ -16,7 +16,6 @@ import collect.uid as uid
 # id, url, timestamp, title
 # the text is stored in a separate file: <id>.txt
 
-ROOT_DIR = os.path.join("data", "news")
 INDEX_FILENAME = 'index.csv'
 
 
@@ -32,18 +31,20 @@ class NewsArticle:
 
 class NewsReader(BaseReader):
     def _latest_zip(self):
-        zips = os.listdir(os.path.join(ROOT_DIR, self.namespace))
+        zips_dir = self.get_data_path()
+        zips = os.listdir(zips_dir)
         zips = [z for z in zips if z.endswith(".zip")]
-        if zips:
-            zips.sort()
-            return zips[-1]
+        if not zips:
+            return
+        zips.sort()
+        return zips[-1]
 
     def latest_date(self) -> datetime:
         latest_zip = self._latest_zip()
         if not latest_zip:
             return datetime.min
         latest_row = None
-        zip_path = os.path.join(ROOT_DIR, self.namespace, latest_zip)
+        zip_path = self.get_data_path(latest_zip)
         with zipfile.ZipFile(zip_path, "r") as zip:
             with zip.open(INDEX_FILENAME, "r") as index_fh:
                 reader = csv.DictReader(io.TextIOWrapper(index_fh, "utf-8"), NewsArticle.CSV_FIELDS)
