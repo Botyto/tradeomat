@@ -1,15 +1,19 @@
+from datetime import timedelta
 import typing
 
+from collect.engine import BaseCollector
 from collect.web import HttpClient
 
 
-class YahooSymbolCollector:
+class YahooSymbolCollector(BaseCollector):
     client: HttpClient
 
     def __init__(self, client: HttpClient|None = None):
+        super().__init__(timedelta(days=30))
         self.client = client or HttpClient()
 
-    def _next(self, symbol: str, leaf: bool):
+    def _next(self, symbol: str, leaf: bool, max_depth: int = 3):
+        leaf = leaf or len(symbol) == max_depth
         if not leaf:
             return symbol + "a"
         if all(c == "z" for c in symbol):
@@ -37,5 +41,6 @@ class YahooSymbolCollector:
             symbol = self._next(symbol, len(data["quotes"]) == 0)
         return result
 
-    def run_forever(self):
-        pass
+    def run_once(self):
+        symbols = self._dfs()
+        print(symbols)

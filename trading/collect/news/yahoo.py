@@ -1,9 +1,9 @@
 import bs4
 from datetime import datetime, timedelta, timezone
 import requests
-import time
 import typing
 
+from collect.engine import BaseCollector
 from collect.news.engine import NewsReader, NewsWriter, NewsArticle
 from collect.wayback import WaybackScraper
 from collect.web import HttpClient
@@ -92,7 +92,7 @@ class YahooArticleScraper:
         return [self._get_article(url) for url in article_urls]
 
 
-class YahooNewsCollector:
+class YahooNewsCollector(BaseCollector):
     HOMEPAGE_URL = "https://finance.yahoo.com/"
     LIVE_TOLERANCE = timedelta(minutes=5)
 
@@ -102,6 +102,7 @@ class YahooNewsCollector:
     wayback: WaybackScraper
 
     def __init__(self):
+        super().__init__(self.LIVE_TOLERANCE)
         self.reader = NewsReader(NAMESPACE)
         self.writer = NewsWriter(NAMESPACE)
         self.scraper = YahooArticleScraper()
@@ -124,8 +125,6 @@ class YahooNewsCollector:
             self._collect_history(since, now - self.LIVE_TOLERANCE)
         self._collect_live()
 
-    def run_forever(self):
-        while True:
-            latest_date = self.reader.latest_date()
-            self._collect_since(latest_date)
-            time.sleep(self.LIVE_TOLERANCE.total_seconds() - 1.0)
+    def run_once(self):
+        latest_date = self.reader.latest_date()
+        self._collect_since(latest_date)

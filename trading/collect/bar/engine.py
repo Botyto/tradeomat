@@ -3,7 +3,8 @@ from enum import Enum
 import os
 import typing
 
-from collect.bar.data import Bar, Bar4, Bar8
+from collect.engine import BaseReader, BaseWriter
+from collect.bar.data import Bar
 
 
 class BarFrequency(Enum):
@@ -11,12 +12,11 @@ class BarFrequency(Enum):
     DAY_1 = "DAY_1"
 
 
-class BarReader:
-    namespace: str
+class BarReader(BaseReader):
     symbol: str
 
     def __init__(self, namespace: str, symbol: str):
-        self.namespace = namespace
+        super().__init__(namespace)
         self.symbol = symbol
 
     def _get_years(self, freq: BarFrequency) -> typing.List[int]:
@@ -79,12 +79,11 @@ class BarReader:
         return result
 
 
-class BarWriter:
-    namespace: str
+class BarWriter(BaseWriter):
     symbol: str
 
     def __init__(self, namespace: str, symbol: str):
-        self.namespace = namespace
+        super().__init__(namespace)
         self.symbol = symbol
 
     def store(self, freq: BarFrequency, bars: typing.List[Bar]):

@@ -1,5 +1,7 @@
 from enum import Enum
 
+from collect.engine import BaseReader, BaseWriter
+
 
 class SymbolType(Enum):
     CURRENCY = "CURRENCY"
@@ -19,15 +21,9 @@ class Symbol:
     type: SymbolType
 
 
-class SymbolReader:
-    namespace: str
-    
-    def __init__(self, namespace: str):
-        self.namespace = namespace
+class SymbolReader(BaseWriter):
+    pass
 
 
-class SymbolWriter:
-    namespace: str
-    
-    def __init__(self, namespace: str):
-        self.namespace = namespace
+class SymbolWriter(BaseWriter):
+    pass

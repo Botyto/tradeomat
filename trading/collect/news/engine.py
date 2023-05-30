@@ -7,6 +7,7 @@ import typing
 from updateablezipfile import UpdateableZipFile
 import zipfile
 
+from collect.engine import BaseReader, BaseWriter
 import collect.uid as uid
 
 # Data storage description:
@@ -29,12 +30,7 @@ class NewsArticle:
     text: str = None
 
 
-class NewsReader:
-    namespace: str
-
-    def __init__(self, namespace: str):
-        self.namespace = namespace
-
+class NewsReader(BaseReader):
     def _latest_zip(self):
         zips = os.listdir(os.path.join(ROOT_DIR, self.namespace))
         zips = [z for z in zips if z.endswith(".zip")]
@@ -58,12 +54,7 @@ class NewsReader:
         return latest_row["date"] if latest_row else datetime.min
 
 
-class NewsWriter:
-    namespace: str
-
-    def __init__(self, namespace: str):
-        self.namespace = namespace
-
+class NewsWriter(BaseWriter):
     def _zip_path(self, date: datetime) -> str:
         return os.path.join(ROOT_DIR, self.namespace, f"{date.year:04}-{date.month:02}.zip")
 
