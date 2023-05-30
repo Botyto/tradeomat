@@ -27,6 +27,9 @@ class BaseCollector:
         self.interval = interval
         self.log = CollectLogger(self.__class__)
 
+    def raise_issue(self, message: str):
+        self.log.error(message)
+
     def run_once(self):
         raise NotImplementedError()
 
