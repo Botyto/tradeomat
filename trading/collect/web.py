@@ -1,63 +1,18 @@
 import bs4
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 import hashlib
-import json
+import io
 import os
 import pickle
 import random
 import requests
-from requests import HTTPError as HttpError
+import requests.cookies
+from requests import PreparedRequest, Response
 import time
 import typing
-import urllib.parse
 
 
-@dataclass
-class HttpRequest:
-	url: str
-	headers: typing.Dict[str, str]
-
-	def hash(self):
-		self_parts = [
-			self.url,
-			*[f"{k}:{v}" for k, v in sorted(self.headers.items()) if k not in ("User-Agent",)],
-		]
-		return hashlib.md5(" ".join(self_parts).encode("utf-8")).hexdigest()
-
-
-@dataclass
-class HttpResponse:
-	url: str
-	status_code: int
-	status: str
-	body: bytes
-	encoding: str
-	headers: typing.Dict[str, str]
-	
-	@property
-	def text(self):
-		return self.body.decode(self.encoding or "utf-8")
-
-	@property
-	def success(self):
-		return 200 <= self.status_code < 300
-
-	def raise_for_status(self):
-		http_error_msg = None
-		if 400 <= self.status_code < 500:
-			http_error_msg = f"{self.status_code} Client Error: {self.status} for url: {self.url}"
-		elif 500 <= self.status_code < 600:
-			http_error_msg = f"{self.status_code} Server Error: {self.status} for url: {self.url}"
-		if http_error_msg:
-			raise HttpError(http_error_msg)
-
-	def json(self):
-		return json.loads(self.text)
-
-
-class HttpClient:
-	cookies: typing.Dict[str, str]
+class HttpClient(requests.Session):
 	# thorttle
 	throttle_min: timedelta|None = None
 	throttle_max: timedelta|None = None
@@ -68,10 +23,12 @@ class HttpClient:
 	cache_ttl: timedelta|None = None
 	user_agents: typing.List[str]|None = None
 
-	def __init__(self):
-		self.cookies = {}
+	def __init__(self, load_user_agents: bool = True):
+		super().__init__()
+		if load_user_agents:
+			self.load_user_agents()
 
-	def __cache_get(self, cache_path: str):
+	def _cache_get(self, cache_path: str) -> Response|None:
 		if not os.path.isfile(cache_path):
 			return
 		now = datetime.now()
@@ -81,19 +38,20 @@ class HttpClient:
 			return
 		with open(cache_path, "rb") as fh:
 			return pickle.load(fh)
+		
+	def _cache_set(self, cache_path: str, response: Response):
+		assert response.ok
+		os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+		with open(cache_path, "wb") as fh:
+			pickle.dump(response, fh)
 
-	def __requests_get(self, request: HttpRequest):
-		response = requests.get(request.url, headers=request.headers)
-		return HttpResponse(
-			response.url,
-			response.status_code,
-			response.reason,
-			response.content,
-			response.encoding,
-			response.headers,
-		)
+	def _cache_hash_req(self, req: PreparedRequest) -> str:
+		buffer = io.BytesIO()
+		buffer.write(req.method.encode("ascii"))
+		buffer.write(req.url.encode("utf-8"))
+		return hashlib.sha256(buffer).hexdigest()
 
-	def __rand_throttle(self):
+	def _rand_throttle(self):
 		if self.throttle_min:
 			if self.throttle_max:
 				return random.uniform(self.throttle_min.total_seconds(), self.throttle_max.total_seconds())
@@ -102,52 +60,42 @@ class HttpClient:
 			return self.throttle_max.total_seconds()
 		return 0
 	
-	def load_user_agents(self, path: str):
-		with open(path, "rt", encoding="utf-8") as fh:
-			self.user_agents = [l.strip() for l in fh.readlines()]
-
-	def get(self, url: str):
-		now = datetime.utcnow()
-		if self.throttle_min or self.throttle_max and self.last_request:
-			throttle = self.__rand_throttle()
-			if (now - self.last_request).total_seconds() < throttle:
-				wait_time = throttle - (now - self.last_request).total_seconds()
-				time.sleep(wait_time)
-		self.last_request = now
-		request = HttpRequest(
-			url=url,
-			headers={},
-		)
-		request.headers["Referer"] = urllib.parse.urlparse(request.url).netloc
-		if self.user_agents:
-			request.headers["User-Agent"] = random.choice(self.user_agents)
-		cache_path = None
+	def send(self, prep: PreparedRequest, **kwargs):
+		# cache
+		cache_path: str|None = None
 		if self.cache:
-			request_hash = request.hash()
+			request_hash = self._cache_hash_req(prep)
 			cache_path = os.path.join(self.cache_namespace, request_hash)
-			cached_response = self.__cache_get(cache_path)
+			cached_response = self._cache_get(cache_path)
 			if cached_response:
 				return cached_response
-		impl = self.__requests_get
-		response = impl(request)
-		if self.cache and response and response.success:
-			os.makedirs(self.cache_namespace, exist_ok=True)
-			with open(cache_path, "wb") as fh:
-				pickle.dump(response, fh)
+		# throttle
+		now = datetime.utcnow()
+		if self.throttle_min or self.throttle_max and self.last_request:
+			throttle = self._rand_throttle()
+			time_passed: timedelta = now - self.last_request
+			if time_passed.total_seconds() < throttle:
+				wait_time = throttle - time_passed.total_seconds()
+				time.sleep(wait_time)
+		self.last_request = now
+		# assign user agent
+		if self.user_agents:
+			if "User-Agent" not in prep.headers or "python-requests" in prep.headers["User-Agent"]:
+				prep.headers["User-Agent"] = random.choice(self.user_agents)
+		# send real request
+		response = super().send(prep, **kwargs)
+		# cache
+		if self.cache and response and response.ok:
+			self._cache_set(cache_path, response)
+		# finish
 		return response
-	
-	def update_cookies(self, response: HttpResponse):
-		set_cookies = response.headers.get("Set-Cookie")
-		if not set_cookies:
-			return
-		for set_cookie in set_cookies.split(","):
-			set_cookie = set_cookie.strip()
-			cookie_parts = set_cookie.split(";")
-			try:
-				cookie_name, cookie_value = cookie_parts[0].split("=")
-				self.cookies[cookie_name] = cookie_value
-			except ValueError:
-				pass
+
+	def load_user_agents(self, path: str|None = None):
+		if path is None:
+			self.user_agents = get_user_agents()
+		else:
+			with open(path, "rt", encoding="utf-8") as fh:
+				self.user_agents = [l.strip() for l in fh.readlines()]
 
 
 class UserAgents:
@@ -157,7 +105,7 @@ class UserAgents:
 	client: HttpClient
 
 	def __init__(self):
-		self.client = HttpClient()
+		self.client = HttpClient(load_user_agents=False)
 
 	def _is_fresh(self):
 		if not os.path.isfile(self.PATH):

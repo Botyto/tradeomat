@@ -6,20 +6,23 @@ import zipfile
 
 from collect.engine import BaseCollector
 from collect.symbol.engine import SymbolType, Symbol
+from collect.web import HttpClient
 
 
 class SecGovCollector(BaseCollector):
+    client: HttpClient
     BULK_URL = "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip"
 
-    def __init__(self):
+    def __init__(self, client: HttpClient|None = None):
         super().__init__(timedelta(days=30))
+        self.client = client or HttpClient()
 
     def _download(self):
         temp_fname = os.path.join("temp", "secgov.zip")
         os.makedirs(os.path.dirname(temp_fname), exist_ok=True)
         if os.path.isfile(temp_fname):
             os.remove(temp_fname)
-        with requests.get(self.BULK_URL, stream=True) as r:
+        with self.client.get(self.BULK_URL, stream=True) as r:
             r.raise_for_status()
             with open(temp_fname, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192): 
