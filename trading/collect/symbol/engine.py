@@ -35,13 +35,10 @@ class SymbolReader(BaseReader):
 
 
 class SymbolWriter(BaseWriter):
-    def _get_path(self, type: SymbolType):
-        return os.path.join("data", "symbols", self.namespace, type.value + ".json")
-
     def store(self, symbols: typing.List[Symbol]):
         by_type = itertools.groupby(symbols, lambda s: s.type)
         for type, symbols in by_type:
-            path = self._get_path(type)
+            path = self.get_data_path(type.value + ".json")
             data = {}
             os.makedirs(os.path.dirname(path), exist_ok=True)
             if os.path.isfile(path):

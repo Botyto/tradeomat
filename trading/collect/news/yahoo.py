@@ -94,7 +94,6 @@ class YahooArticleScraper:
 
 class YahooNewsCollector(BaseCollector):
     HOMEPAGE_URL = "https://finance.yahoo.com/"
-    LIVE_TOLERANCE = timedelta(minutes=5)
 
     reader: NewsReader
     writer: NewsWriter
@@ -102,9 +101,9 @@ class YahooNewsCollector(BaseCollector):
     wayback: WaybackScraper
 
     def __init__(self):
-        super().__init__(self.LIVE_TOLERANCE)
-        self.reader = NewsReader(NAMESPACE)
-        self.writer = NewsWriter(NAMESPACE)
+        super().__init__(timedelta(minutes=5))
+        self.reader = NewsReader(self, NAMESPACE)
+        self.writer = NewsWriter(self, NAMESPACE)
         self.scraper = YahooArticleScraper()
         self.wayback = WaybackScraper()
 
@@ -121,8 +120,8 @@ class YahooNewsCollector(BaseCollector):
 
     def _collect_since(self, since: datetime):
         now = datetime.utcnow().replace(tzinfo=timezone.utc)
-        if now - since > self.LIVE_TOLERANCE:
-            self._collect_history(since, now - self.LIVE_TOLERANCE)
+        if now - since > self.interval:
+            self._collect_history(since, now - self.interval)
         self._collect_live()
 
     def run_once(self):

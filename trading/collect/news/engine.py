@@ -56,7 +56,7 @@ class NewsReader(BaseReader):
 
 class NewsWriter(BaseWriter):
     def _zip_path(self, date: datetime) -> str:
-        return os.path.join(ROOT_DIR, self.namespace, f"{date.year:04}-{date.month:02}.zip")
+        return self.get_data_path(f"{date.year:04}-{date.month:02}.zip")
 
     def _fixup_article(self, article: NewsArticle):
         assert article.date is not None

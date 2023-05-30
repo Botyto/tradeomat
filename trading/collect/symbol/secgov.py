@@ -21,7 +21,7 @@ class SecGovCollector(BaseCollector):
         self.writer = SymbolWriter(NAMESPACE)
 
     def _download(self):
-        temp_fname = os.path.join("temp", "secgov.zip")
+        temp_fname = self.get_temp_path("secgov.zip")
         os.makedirs(os.path.dirname(temp_fname), exist_ok=True)
         if os.path.isfile(temp_fname):
             mtime = os.path.getmtime(temp_fname)
