@@ -1,26 +1,32 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import json
 import os
-import requests
 import zipfile
 
 from collect.engine import BaseCollector
-from collect.symbol.engine import SymbolType, Symbol
+from collect.symbol.engine import SymbolType, Symbol, SymbolWriter
 from collect.web import HttpClient
+
+NAMESPACE = "secgov"
 
 
 class SecGovCollector(BaseCollector):
-    client: HttpClient
     BULK_URL = "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip"
+    client: HttpClient
+    writer: SymbolWriter
 
     def __init__(self, client: HttpClient|None = None):
         super().__init__(timedelta(days=30))
         self.client = client or HttpClient()
+        self.writer = SymbolWriter(NAMESPACE)
 
     def _download(self):
         temp_fname = os.path.join("temp", "secgov.zip")
         os.makedirs(os.path.dirname(temp_fname), exist_ok=True)
         if os.path.isfile(temp_fname):
+            mtime = os.path.getmtime(temp_fname)
+            if datetime.utcnow() - datetime.utcfromtimestamp(mtime) < self.interval:
+                return temp_fname
             os.remove(temp_fname)
         with self.client.get(self.BULK_URL, stream=True) as r:
             r.raise_for_status()
@@ -30,9 +36,9 @@ class SecGovCollector(BaseCollector):
         return temp_fname
     
     def _extract(self, data: dict):
-        result = Symbol()
-        # TODO ...
-        return result
+        if not data.get("tickers"):
+            return
+        return Symbol(SymbolType.STOCK, data["tickers"][0], data["name"])
 
     def run_once(self):
         result = {}
@@ -40,7 +46,12 @@ class SecGovCollector(BaseCollector):
         with zipfile.ZipFile(zip_path, "r") as zip:
             for file in zip.filelist:
                 with zip.open(file) as fh:
-                    data = json.load(fh)
-                    symbol = self._extract(data)
-                    result[symbol.symbol] = symbol
-        return list(result.values())
+                    try:
+                        data = json.load(fh)
+                        symbol = self._extract(data)
+                        if not symbol:
+                            continue
+                        result[symbol.symbol] = symbol
+                    except Exception as e:
+                        self.log.error(f"Failed to process {file.filename}: {e}")
+        self.writer.store(result.values())
