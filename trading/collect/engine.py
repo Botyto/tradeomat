@@ -1,6 +1,8 @@
 from datetime import timedelta
 import time
 
+from collect.log import CollectLogger
+
 
 class BaseStorage:
     namespace: str
@@ -19,9 +21,11 @@ class BaseWriter(BaseStorage):
 
 class BaseCollector:
     interval: timedelta
+    log: CollectLogger
 
     def __init__(self, interval: timedelta):
         self.interval = interval
+        self.log = CollectLogger(self.__class__)
 
     def run_once(self):
         raise NotImplementedError()
