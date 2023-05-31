@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
+import json
 import os
 import threading
 import time
@@ -17,15 +18,20 @@ class Environment:
         self.temp_path = temp_path
 
     def get_data_path(self, *args):
-        return os.path.join(self.data_path, *args)
+        result = os.path.join(self.data_path, *args)
+        os.makedirs(os.path.dirname(result), exist_ok=True)
+        return result
 
     def get_temp_path(self, *args):
-        return os.path.join(self.temp_path, *args)
+        result = os.path.join(self.temp_path, *args)
+        os.makedirs(os.path.dirname(result), exist_ok=True)
+        return result
 
 
 class BaseCollector:
     env: Environment
     interval: timedelta
+    last_run: datetime
     log: CollectLogger
     module: str
     on_run: Signal
@@ -36,6 +42,7 @@ class BaseCollector:
         self.log = CollectLogger(self.__class__)
         self.module = type(self).__module__.split(".")[-1]
         self.on_run = Signal()
+        self.last_run = datetime.min.replace(tzinfo=timezone.utc)
 
     def get_data_path(self, *args):
         return self.env.get_data_path(self.module, *args)
@@ -51,9 +58,13 @@ class BaseCollector:
 
     def run_forever(self):
         while True:
+            time_since_last_run = datetime.utcnow().replace(tzinfo=timezone.utc) - self.last_run
+            if time_since_last_run < self.interval:
+                time.sleep((self.interval - time_since_last_run).total_seconds())
+                continue
+            self.last_run = datetime.utcnow().replace(tzinfo=timezone.utc)
             self.on_run(self)
             self.run_once()
-            time.sleep(self.interval.total_seconds())
 
 
 class BaseStorage:
@@ -109,19 +120,38 @@ class BaseWriter(BaseStorage):
 
 
 class Executor:
+    env: Environment
     collectors: typing.List[BaseCollector]
     threads: typing.Dict[BaseCollector, threading.Thread]
+    last_run: typing.Dict[str, datetime]
+    last_run_lock: threading.Lock
 
-    def __init__(self):
+    def __init__(self, env: Environment):
+        self.env = env
         self.collectors = []
         self.threads = {}
+        self.last_run_lock = threading.Lock()
+
+        last_run_path = self._last_run_path()
+        if os.path.isfile(last_run_path):
+            with open(last_run_path, "rt", encoding="utf-8") as fh:
+                self.last_run = json.load(fh)
+        else:
+            self.last_run = {}
+
+    def _last_run_path(self):
+        return self.env.get_data_path("last_run")
 
     def add_collector(self, collector: BaseCollector):
         self.collectors.append(collector)
         collector.on_run.subscribe(self.on_collector_run)
+        collector.last_run = self.last_run.get(type(collector).__name__, datetime.min.replace(tzinfo=timezone.utc))
 
     def on_collector_run(self, collector: BaseCollector):
-        pass
+        with self.last_run_lock:
+            self.last_run[type(collector).__name__] = datetime.utcnow().replace(tzinfo=timezone.utc)
+            with open(self._last_run_path(), "wt", encoding="utf-8") as fh:
+                json.dump(self.last_run, fh, indent=2)
 
     def run_in_thread(self) -> threading.Thread:
         thread = threading.Thread(target=self.run_forever)

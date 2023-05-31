@@ -24,9 +24,6 @@ class SecGovCollector(BaseCollector):
         temp_fname = self.get_temp_path("secgov.zip")
         os.makedirs(os.path.dirname(temp_fname), exist_ok=True)
         if os.path.isfile(temp_fname):
-            mtime = os.path.getmtime(temp_fname)
-            if datetime.utcnow() - datetime.utcfromtimestamp(mtime) < self.interval:
-                return temp_fname
             os.remove(temp_fname)
         with self.client.get(self.BULK_URL, stream=True) as r:
             r.raise_for_status()
