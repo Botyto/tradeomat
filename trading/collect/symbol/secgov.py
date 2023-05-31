@@ -15,8 +15,8 @@ class SecGovCollector(BaseCollector):
     client: HttpClient
     writer: SymbolWriter
 
-    def __init__(self, client: HttpClient|None = None):
-        super().__init__(timedelta(days=30))
+    def __init__(self, env, client: HttpClient|None = None):
+        super().__init__(env, timedelta(days=30))
         self.client = client or HttpClient()
         self.writer = SymbolWriter(self, NAMESPACE)
 

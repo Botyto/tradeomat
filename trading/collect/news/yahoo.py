@@ -100,8 +100,8 @@ class YahooNewsCollector(BaseCollector):
     scraper: YahooArticleScraper
     wayback: WaybackScraper
 
-    def __init__(self):
-        super().__init__(timedelta(minutes=5))
+    def __init__(self, env):
+        super().__init__(env, timedelta(minutes=5))
         self.reader = NewsReader(self, NAMESPACE)
         self.writer = NewsWriter(self, NAMESPACE)
         self.scraper = YahooArticleScraper()

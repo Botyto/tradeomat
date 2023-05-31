@@ -1,8 +1,11 @@
 from datetime import timedelta
 import os
+import threading
 import time
+import typing
 
 from collect.log import CollectLogger
+from collect.signal import Signal
 
 
 class Environment:
@@ -25,12 +28,14 @@ class BaseCollector:
     interval: timedelta
     log: CollectLogger
     module: str
+    on_run: Signal
 
     def __init__(self, env: Environment, interval: timedelta):
         self.env = env
         self.interval = interval
         self.log = CollectLogger(self.__class__)
         self.module = type(self).__module__.split(".")[-1]
+        self.on_run = Signal()
 
     def get_data_path(self, *args):
         return self.env.get_data_path(self.module, *args)
@@ -46,6 +51,7 @@ class BaseCollector:
 
     def run_forever(self):
         while True:
+            self.on_run(self)
             self.run_once()
             time.sleep(self.interval.total_seconds())
 
@@ -100,3 +106,34 @@ class BaseReader(BaseStorage):
 
 class BaseWriter(BaseStorage):
     pass
+
+
+class Executor:
+    collectors: typing.List[BaseCollector]
+    threads: typing.Dict[BaseCollector, threading.Thread]
+
+    def __init__(self):
+        self.collectors = []
+        self.threads = {}
+
+    def add_collector(self, collector: BaseCollector):
+        self.collectors.append(collector)
+        collector.on_run.subscribe(self.on_collector_run)
+
+    def on_collector_run(self, collector: BaseCollector):
+        pass
+
+    def run_in_thread(self) -> threading.Thread:
+        thread = threading.Thread(target=self.run_forever)
+        thread.start()
+        return thread
+
+    def run_forever(self):
+        for collector in self.collectors:
+            thread = threading.Thread(
+                target=collector.run_forever,
+            )
+            thread.start()
+            self.threads[collector] = thread
+        for collector, thread in self.threads.items():
+            thread.join()
