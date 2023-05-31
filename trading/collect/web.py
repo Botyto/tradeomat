@@ -116,7 +116,7 @@ class UserAgents:
 
 	def _fetch_new(self):
 		random_url = "https://user-agents.net/random"
-		response = requests.post(random_url, data={"limit": 1000, "action": "generate"})
+		response = self.client.post(random_url, data={"limit": 1000, "action": "generate"})
 		response.raise_for_status()
 		soup = bs4.BeautifulSoup(response.text, "html.parser")
 		return [list_item.text.strip() for list_item in soup.find("section").find("ol").find_all("li")]

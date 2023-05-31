@@ -59,10 +59,39 @@ class BaseStorage:
         self.namespace = namespace
 
     def get_data_path(self, *args):
-        return self.collector.get_data_path(self.namespace, *args)
+        return self.collector.get_data_path(*args)
 
     def get_temp_path(self, *args):
-        return self.collector.get_temp_path(self.namespace, *args)
+        return self.collector.get_temp_path(*args)
+
+    def get_ns_data_path(self, *args):
+        return self.get_data_path(self.namespace, *args)
+    
+    def get_ns_temp_path(self, *args):
+        return self.get_temp_path(self.namespace, *args)
+
+    def __find_ns_path(self, template: str):
+        start_idx = template.find("<NS>")
+        end_ids = start_idx + len("<NS>")
+        left = template[:start_idx]
+        right = template[end_ids:]
+        if right.startswith(os.sep):
+            right = right[len(os.sep):]
+        for ns in os.listdir(left):
+            ns_path = os.path.join(left, ns, right)
+            if not os.path.isdir(ns_path):
+                continue
+            file_path = os.path.join(ns_path, right)
+            if os.path.isfile(file_path):
+                return file_path
+
+    def find_ns_data_path(self, *args):
+        template = self.get_data_path("<NS>", *args)
+        return self.__find_ns_path(template)
+    
+    def find_ns_temp_path(self, *args):
+        template = self.get_temp_path("<NS>", *args)
+        return self.__find_ns_path(template)
 
 
 class BaseReader(BaseStorage):

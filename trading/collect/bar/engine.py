@@ -89,7 +89,7 @@ class BarWriter(BaseWriter):
     def store(self, freq: BarFrequency, bars: typing.List[Bar]):
         if not bars:
             return
-        path = self.get_data_path(self.symbol, freq.value + ".bar")
+        path = self.get_ns_data_path(self.symbol, freq.value + ".bar")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         exists = os.path.isfile(path)
         with open(path, "ab") as fh:

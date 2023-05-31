@@ -8,7 +8,7 @@ from collect.web import HttpClient
 class WaybackScraper:
     client: HttpClient
 
-    def __init__(self, client: HttpClient|None):
+    def __init__(self, client: HttpClient|None = None):
         self.client = client or HttpClient()
 
     def _parse_timestamp(self, timestamp: str):

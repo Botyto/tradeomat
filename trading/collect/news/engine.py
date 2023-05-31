@@ -31,7 +31,7 @@ class NewsArticle:
 
 class NewsReader(BaseReader):
     def _latest_zip(self):
-        zips_dir = self.get_data_path()
+        zips_dir = self.get_ns_data_path()
         zips = os.listdir(zips_dir)
         zips = [z for z in zips if z.endswith(".zip")]
         if not zips:
@@ -44,7 +44,7 @@ class NewsReader(BaseReader):
         if not latest_zip:
             return datetime.min
         latest_row = None
-        zip_path = self.get_data_path(latest_zip)
+        zip_path = self.get_ns_data_path(latest_zip)
         with zipfile.ZipFile(zip_path, "r") as zip:
             with zip.open(INDEX_FILENAME, "r") as index_fh:
                 reader = csv.DictReader(io.TextIOWrapper(index_fh, "utf-8"), NewsArticle.CSV_FIELDS)
@@ -57,7 +57,7 @@ class NewsReader(BaseReader):
 
 class NewsWriter(BaseWriter):
     def _zip_path(self, date: datetime) -> str:
-        return self.get_data_path(f"{date.year:04}-{date.month:02}.zip")
+        return self.get_ns_data_path(f"{date.year:04}-{date.month:02}.zip")
 
     def _fixup_article(self, article: NewsArticle):
         assert article.date is not None
