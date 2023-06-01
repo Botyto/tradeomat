@@ -33,22 +33,22 @@ class BaseCollector:
     interval: timedelta
     last_run: datetime
     log: CollectLogger
-    module: str
+    family: str
     on_run: Signal
 
     def __init__(self, env: Environment, interval: timedelta):
         self.env = env
         self.interval = interval
         self.log = CollectLogger(self.__class__)
-        self.module = type(self).__module__.split(".")[-1]
+        self.family = type(self).__module__.split(".")[-2]
         self.on_run = Signal()
         self.last_run = datetime.min.replace(tzinfo=timezone.utc)
 
     def get_data_path(self, *args):
-        return self.env.get_data_path(self.module, *args)
+        return self.env.get_data_path(self.family, *args)
 
     def get_temp_path(self, *args):
-        return self.env.get_temp_path(self.module, *args)
+        return self.env.get_temp_path(self.family, *args)
 
     def raise_issue(self, message: str):
         self.log.error(message)

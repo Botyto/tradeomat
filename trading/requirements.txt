@@ -1,4 +1,5 @@
 backtrader
 bs4
+pycountry
 tornado
 updateable-zip-file
