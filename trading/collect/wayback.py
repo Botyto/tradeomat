@@ -60,9 +60,9 @@ class WaybackScraper:
         response.raise_for_status()
         return response.text
 
-    def for_each(self, url: str, timestamps: typing.List[datetime], callback: typing.Callable[[str], None], *args, **kwargs):
+    def for_each(self, url: str, timestamps: typing.List[datetime], callback: typing.Callable[[str], typing.List[typing.Any]], *args, **kwargs) -> typing.List[typing.Any]:
         result = []
         for timestamp in timestamps:
             html = self.get(url, timestamp)
-            result.append(callback(html, *args, **kwargs))
+            result.extend(callback(html, *args, **kwargs))
         return result

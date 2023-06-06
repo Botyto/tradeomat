@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 import io
 import itertools
 import os
@@ -50,7 +50,8 @@ class NewsReader(BaseReader):
                 reader = csv.DictReader(io.TextIOWrapper(index_fh, "utf-8"), NewsArticle.CSV_FIELDS)
                 next(reader)  # skip header
                 for row in reader:
-                    if row["date"] > latest_row:
+                    row["date"] = datetime.fromisoformat(row["date"]).replace(tzinfo=timezone.utc)
+                    if latest_row is None or row["date"] > latest_row:
                         latest_row = row
         return latest_row["date"] if latest_row else datetime.min
 

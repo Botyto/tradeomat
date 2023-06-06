@@ -1,9 +1,10 @@
 import bs4
 from datetime import datetime, timedelta, timezone
+import re
 import requests
 import typing
 
-from collect.engine import BaseCollector
+from collect.engine import BaseCollector, CollectLogger
 from collect.news.engine import NewsReader, NewsWriter, NewsArticle
 from collect.wayback import WaybackScraper
 from collect.web import HttpClient
@@ -12,9 +13,13 @@ NAMESPACE = "yahoo"
 
 
 class YahooArticleScraper:
+    WAYBACK_HREF = re.compile(r"^https?://web\.archive\.org/web/\d+/(.*)$")
+
+    log: CollectLogger
     client: HttpClient
 
-    def __init__(self, client: HttpClient|None = None):
+    def __init__(self, log: CollectLogger, client: HttpClient|None = None):
+        self.log = log
         self.client = client or HttpClient()
 
     def _get_article_urls(self, homepage_html: str) -> typing.Set[str]:
@@ -29,6 +34,9 @@ class YahooArticleScraper:
                 if not isinstance(href, str) or not href.endswith(".html"):
                     continue
                 full_url = None
+                match = self.WAYBACK_HREF.match(href)
+                if match:
+                    href = match.group(1)
                 if href.startswith("/news/"):
                     full_url = "https://finance.yahoo.com" + href
                 elif href.startswith("https://finance.yahoo.com/news/"):
@@ -42,16 +50,17 @@ class YahooArticleScraper:
                 pass
         return article_urls
 
-    def _parse_article_date(datetime_str: str) -> datetime|None:
+    def _parse_article_date(self, datetime_str: str) -> datetime|None:
         formats = [
             "%B %d, %Y",
             "%B %d, %Y at %I:%M %p",
         ]
         for fmt in formats:
             try:
-                return datetime.strptime(datetime_str, fmt)
+                return datetime.strptime(datetime_str, fmt).replace(tzinfo=timezone.utc)
             except ValueError:
                 pass
+        raise ValueError(f"Could not parse datetime string: {datetime_str}")
 
     def _prase_article(self, article_html: str) -> NewsArticle:
         result = NewsArticle()
@@ -104,12 +113,12 @@ class YahooNewsCollector(BaseCollector):
         super().__init__(env, timedelta(minutes=5))
         self.reader = NewsReader(self, NAMESPACE)
         self.writer = NewsWriter(self, NAMESPACE)
-        self.scraper = YahooArticleScraper()
+        self.scraper = YahooArticleScraper(self.log)
         self.wayback = WaybackScraper()
 
     def _collect_history(self, start: datetime, end: datetime):
         snapshots = self.wayback.list_snapshopts(self.HOMEPAGE_URL, start, end)
-        articles = self.wayback.for_each(snapshots, self.scraper.scrape)
+        articles = self.wayback.for_each(self.HOMEPAGE_URL, snapshots, self.scraper.scrape)
         self.writer.store_many(articles)
 
     def _collect_live(self):
