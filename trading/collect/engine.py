@@ -144,7 +144,7 @@ class Executor:
 
         last_run_path = self._last_run_path()
         if os.path.isfile(last_run_path):
-            with open(last_run_path, "rt", encoding="utf-8") as fh:
+            with open(last_run_path, "rb") as fh:
                 self.last_run = pickle.load(fh)
         else:
             self.last_run = {}
@@ -160,7 +160,7 @@ class Executor:
     def on_collector_run(self, collector: BaseCollector):
         with self.last_run_lock:
             self.last_run[type(collector).__name__] = collector.last_run
-            with open(self._last_run_path(), "wt", encoding="utf-8") as fh:
+            with open(self._last_run_path(), "wb") as fh:
                 pickle.dump(self.last_run, fh, indent=2)
 
     def run_in_thread(self) -> threading.Thread:

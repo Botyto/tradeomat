@@ -38,15 +38,15 @@ class SymbolWriter(BaseWriter):
     def store(self, symbols: typing.List[Symbol]):
         by_type = itertools.groupby(symbols, lambda s: s.type)
         for type, symbols in by_type:
-            path = self.get_data_path(type.value + ".json")
+            path = self.get_data_path(type.value + ".pickle")
             data: typing.List[Symbol] = []
             os.makedirs(os.path.dirname(path), exist_ok=True)
             if os.path.isfile(path):
-                with open(path, "rt", encoding="utf-8") as fh:
+                with open(path, "rb") as fh:
                     data = pickle.load(fh)
             symbol_map = {symbol.symbol: symbol for symbol in data}
             for symbol in symbols:
                 symbol_map[symbol.symbol] = symbol
             data = list(symbol_map.values())
-            with open(path, "wt", encoding="utf-8") as fh:
+            with open(path, "wb") as fh:
                 pickle.dump(data, fh, indent=2, sort_keys=True)

@@ -7,7 +7,7 @@ class SocialMedia(Enum):
 
 
 class SocialMediaPost:
-    social_media: SocialMedia
+    media: SocialMedia
     url: str
     author: str
     date: datetime
