@@ -3,7 +3,7 @@ import json
 import requests
 import typing
 
-import twitter.data
+from collect.social.twitter_engine.data import Tweet, TwitterUser
 
 
 class TwitterScraper:
@@ -42,7 +42,7 @@ class TwitterScraper:
         response.raise_for_status()
         return response.json()
 
-    def get_user(self, username: str) -> twitter.data.TwitterUser:
+    def get_user(self, username: str) -> TwitterUser:
         variables = {
             "screen_name": username,
             "withSafetyModeUserFields": True,
@@ -60,7 +60,7 @@ class TwitterScraper:
         response = self._api_call(url)
         rest_id = response["data"]["user"]["result"]["rest_id"]
         legacy_user = response["data"]["user"]["result"]["legacy"]
-        return twitter.data.TwitterUser(
+        return TwitterUser(
             rest_id,
             username,
             legacy_user["name"],
@@ -70,11 +70,12 @@ class TwitterScraper:
         )
 
     def get_tweets(self, username: str, max_count: int|None = None, min_date: datetime.datetime|None = None):
+        user_id = self.get_user(username).rest_id
         result = []
         cursor = None
         if min_date:
             while True:
-                chunk, cursor = self._get_tweets_page(username, cursor=cursor)
+                chunk, cursor = self._get_tweets_page(user_id, cursor=cursor)
                 result.extend(chunk)
                 if not chunk or chunk[-1].created_at < min_date:
                     break
@@ -84,18 +85,17 @@ class TwitterScraper:
                     break
         elif max_count:
             while len(result) < max_count:
-                chunk, cursor = self._get_tweets_page(username, count=max_count-len(result), cursor=cursor)
+                chunk, cursor = self._get_tweets_page(user_id, count=max_count-len(result), cursor=cursor)
                 result.extend(chunk)
                 if not chunk:
                     break
         else:
-            result, _ = self._get_tweets_page(username)
+            result, _ = self._get_tweets_page(user_id)
         if max_count and len(result) > max_count:
             result = result[:max_count]
         return result
 
-    def _get_tweets_page(self, username: str, count: int = 100, cursor: str|None = None) -> typing.Tuple[typing.List[twitter.data.Tweet], str|None]:
-        user_id = self.get_user(username).rest_id
+    def _get_tweets_page(self, user_id: str, count: int = 100, cursor: str|None = None) -> typing.Tuple[typing.List[Tweet], str|None]:
         variables = {
             "userId": user_id,
             "count": count,
@@ -145,7 +145,7 @@ class TwitterScraper:
                     timeline_content = content["itemContent"]
                     tweet_raw = timeline_content["tweet_results"]["result"]
                     legacy_tweet = tweet_raw["legacy"]
-                    result.append(twitter.data.Tweet(
+                    result.append(Tweet(
                         id=tweet_id,
                         created_at=datetime.datetime.strptime(legacy_tweet["created_at"], "%a %B %d %H:%M:%S %z %Y"),
                         text=legacy_tweet["full_text"],
