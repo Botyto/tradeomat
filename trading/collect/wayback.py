@@ -52,6 +52,7 @@ class WaybackScraper:
             if len(data[-2]) > 0:
                 break
             resume_key = data[-1][0]
+        result.sort()
         return result
 
     def get(self, url: str, timestamp: datetime) -> str:
@@ -63,6 +64,7 @@ class WaybackScraper:
         return response.text
 
     def for_each(self, url: str, timestamps: typing.List[datetime], callback: typing.Callable[[str], typing.List[typing.Any]], *args, **kwargs) -> typing.List[typing.Any]:
+        assert all(timestamps[i] <= timestamps[i+1] for i in range(len(timestamps) - 1)), "Timestamps must be in ascending order"
         result = []
         for timestamp in timestamps:
             try:
