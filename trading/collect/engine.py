@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-import json
+import pickle
 import os
 import threading
 import time
@@ -28,10 +28,24 @@ class Environment:
         return result
 
 
+class CollectorRun:
+    timestamp: datetime
+
+    def __init__(self):
+        self.timestamp = datetime.min.replace(tzinfo=timezone.utc)
+
+    def update_timestamp(self):
+        self.timestamp = datetime.utcnow().replace(tzinfo=timezone.utc)
+
+    @property
+    def time_since(self):
+        return datetime.utcnow().replace(tzinfo=timezone.utc) - self.timestamp
+
+
 class BaseCollector:
     env: Environment
     interval: timedelta
-    last_run: datetime
+    last_run: CollectorRun
     log: CollectLogger
     family: str
     on_run: Signal
@@ -42,7 +56,7 @@ class BaseCollector:
         self.log = CollectLogger(self.__class__)
         self.family = type(self).__module__.split(".")[-2]
         self.on_run = Signal()
-        self.last_run = datetime.min.replace(tzinfo=timezone.utc)
+        self.last_run = CollectorRun()
 
     def get_data_path(self, *args):
         return self.env.get_data_path(self.family, *args)
@@ -55,11 +69,10 @@ class BaseCollector:
 
     def run_forever(self):
         while True:
-            time_since_last_run = datetime.utcnow().replace(tzinfo=timezone.utc) - self.last_run
-            if time_since_last_run < self.interval:
-                time.sleep((self.interval - time_since_last_run).total_seconds())
+            if self.last_run.time_since < self.interval:
+                time.sleep((self.interval - self.last_run.time_since).total_seconds())
                 continue
-            self.last_run = datetime.utcnow().replace(tzinfo=timezone.utc)
+            self.last_run.update_timestamp()
             self.on_run(self)
             self.run_once()
 
@@ -120,7 +133,7 @@ class Executor:
     env: Environment
     collectors: typing.List[BaseCollector]
     threads: typing.Dict[BaseCollector, threading.Thread]
-    last_run: typing.Dict[str, datetime]
+    last_run: typing.Dict[str, CollectorRun]
     last_run_lock: threading.Lock
 
     def __init__(self, env: Environment):
@@ -132,7 +145,7 @@ class Executor:
         last_run_path = self._last_run_path()
         if os.path.isfile(last_run_path):
             with open(last_run_path, "rt", encoding="utf-8") as fh:
-                self.last_run = json.load(fh)
+                self.last_run = pickle.load(fh)
         else:
             self.last_run = {}
 
@@ -142,13 +155,13 @@ class Executor:
     def add_collector(self, collector: BaseCollector):
         self.collectors.append(collector)
         collector.on_run.subscribe(self.on_collector_run)
-        collector.last_run = self.last_run.get(type(collector).__name__, datetime.min.replace(tzinfo=timezone.utc))
+        collector.last_run = self.last_run.get(type(collector).__name__, CollectorRun())
 
     def on_collector_run(self, collector: BaseCollector):
         with self.last_run_lock:
-            self.last_run[type(collector).__name__] = datetime.utcnow().replace(tzinfo=timezone.utc)
+            self.last_run[type(collector).__name__] = collector.last_run
             with open(self._last_run_path(), "wt", encoding="utf-8") as fh:
-                json.dump(self.last_run, fh, indent=2)
+                pickle.dump(self.last_run, fh, indent=2)
 
     def run_in_thread(self) -> threading.Thread:
         thread = threading.Thread(target=self.run_forever)
