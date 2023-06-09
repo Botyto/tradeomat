@@ -92,6 +92,12 @@ def run_engine():
     eng.start_timestamp = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
     task = eng.run()
 
-collect_news()
+def browse_collect():
+    from collect.browser import CollectBrowser
+    b = CollectBrowser()
+    b.mainloop()
+
+# collect_news()
 # collect_stocks()
 # restore_news()
+browse_collect()
