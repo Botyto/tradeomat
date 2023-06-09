@@ -9,8 +9,16 @@ from collect.social.data import SocialMedia, SocialMediaPost
 
 
 class SocialReader(BaseReader):
-    def latest_date(self, username: str) -> datetime:
-        pass
+    def _get_path(self, media: SocialMedia, author: str):
+        return self.get_ns_data_path(str(media), author + ".pickle")
+
+    def latest_date(self, media: SocialMedia, username: str) -> datetime:
+        path = self._get_path(media, username)
+        if not os.path.isfile(path):
+            return datetime.min
+        with open(path, "rb") as f:
+            posts: typing.List[SocialMediaPost] = pickle.load(f)
+            return max(p.date for p in posts)  # TODO optimize
 
 
 class SocialWriter(BaseWriter):
