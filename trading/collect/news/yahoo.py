@@ -98,7 +98,14 @@ class YahooArticleScraper:
 
     def scrape(self, homepage_html: str) -> typing.List[NewsArticle]:
         article_urls = self._get_article_urls(homepage_html)
-        return [self._get_article(url) for url in article_urls]
+        result = []
+        for url in article_urls:
+            try:
+                article = self._get_article(url)
+                result.append(article)
+            except Exception as e:
+                self.log.raise_issue(f"Could not scrape article: {url}", e)
+        return result
 
 
 class YahooNewsCollector(BaseCollector):
@@ -114,7 +121,7 @@ class YahooNewsCollector(BaseCollector):
         self.reader = NewsReader(self, NAMESPACE)
         self.writer = NewsWriter(self, NAMESPACE)
         self.scraper = YahooArticleScraper(self.log)
-        self.wayback = WaybackScraper()
+        self.wayback = WaybackScraper(self.log)
 
     def _collect_history(self, start: datetime, end: datetime):
         snapshots = self.wayback.list_snapshopts(self.HOMEPAGE_URL, start, end)

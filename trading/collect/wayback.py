@@ -2,13 +2,15 @@ from datetime import datetime, timezone
 import typing
 import urllib.parse
 
+from collect.engine import CollectLogger
 from collect.web import HttpClient
 
 
 class WaybackScraper:
     client: HttpClient
 
-    def __init__(self, client: HttpClient|None = None):
+    def __init__(self, log: CollectLogger, client: HttpClient|None = None):
+        self.log = log
         self.client = client or HttpClient()
 
     def _parse_timestamp(self, timestamp: str):
@@ -63,6 +65,10 @@ class WaybackScraper:
     def for_each(self, url: str, timestamps: typing.List[datetime], callback: typing.Callable[[str], typing.List[typing.Any]], *args, **kwargs) -> typing.List[typing.Any]:
         result = []
         for timestamp in timestamps:
-            html = self.get(url, timestamp)
-            result.extend(callback(html, *args, **kwargs))
+            try:
+                self.log.debug(f"Processing {url} at {timestamp}")
+                html = self.get(url, timestamp)
+                result.extend(callback(html, *args, **kwargs))
+            except Exception as e:
+                self.log.raise_issue(f"Failed to process {url} at {timestamp}: {e}")
         return result

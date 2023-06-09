@@ -22,7 +22,9 @@ class CollectLogger:
         if level.value < self.level.value:
             return
         msg = " ".join(str(arg) for arg in args)
-        print(f"{level} [{self.module}.{self.name}] {msg}")
+        final_msg = f"{level} [{self.module}.{self.name}] {msg}"
+        print(final_msg)
+        return final_msg
 
     def print(self, *args):
         return self.log(LogLevel.INFO, *args)
@@ -38,3 +40,8 @@ class CollectLogger:
 
     def error(self, *args):
         return self.log(LogLevel.ERROR, *args)
+    
+    def raise_issue(self, *args):
+        msg = self.error(*args)
+        # TODO store issue somewhere
+        return msg

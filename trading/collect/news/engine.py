@@ -51,7 +51,7 @@ class NewsReader(BaseReader):
                 next(reader)  # skip header
                 for row in reader:
                     row["date"] = datetime.fromisoformat(row["date"]).replace(tzinfo=timezone.utc)
-                    if latest_row is None or row["date"] > latest_row:
+                    if latest_row is None or row["date"] > latest_row["date"]:
                         latest_row = row
         return latest_row["date"] if latest_row else datetime.min
 
