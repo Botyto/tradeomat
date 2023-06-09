@@ -1,23 +1,18 @@
 import datetime
 import json
-import requests
 import typing
 
+from collect.web import HttpClient
 from collect.social.twitter_engine.data import Tweet, TwitterUser
 
 
 class TwitterScraper:
     AUTHORIZATION = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+    client: HttpClient
+    guest_token: str|None = None
 
-    _session: requests.Session
-    _guest_token: str|None = None
-    _thorttle: datetime.timedelta|None = None
-
-    def __init__(self, warmup: bool = False, user_agent: str|None = None, throttle: datetime.timedelta|None = None):
-        self._session = requests.Session()
-        if user_agent is not None:
-            self._session.headers.update({"User-Agent": user_agent})
-        self._throttle = throttle
+    def __init__(self, client: HttpClient|None = None, warmup: bool = False):
+        self.client = client or HttpClient()
         if warmup:
             self.warmup()
 
@@ -25,20 +20,20 @@ class TwitterScraper:
         self._get_guest_token()
 
     def _get_guest_token(self):
-        if self._guest_token is None:
-            found_response = self._session.get("https://twitter.com/explore")
+        if self.guest_token is None:
+            found_response = self.client.get("https://twitter.com/explore")
             html = found_response.text
             gt_from = html.index("gt=")
             gt_to = html.index(";", gt_from)
-            self._guest_token = html[gt_from+3:gt_to]
-        return self._guest_token
+            self.guest_token = html[gt_from+3:gt_to]
+        return self.guest_token
 
     def _api_call(self, url: str):
         headers = {
             "Authorization": self.AUTHORIZATION,
             "x-guest-token": self._get_guest_token(),
         }
-        response = self._session.get(url, headers=headers)
+        response = self.client.get(url, headers=headers)
         response.raise_for_status()
         return response.json()
 
