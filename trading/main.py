@@ -93,8 +93,8 @@ def run_engine():
     task = eng.run()
 
 def browse_collect():
-    from collect.browser import CollectBrowser
-    b = CollectBrowser()
+    from collect.browser.browser import CollectBrowser
+    b = CollectBrowser(env)
     b.mainloop()
 
 # collect_news()
