@@ -92,6 +92,21 @@ def run_engine():
     eng.start_timestamp = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
     task = eng.run()
 
-collect_news()
+def test_ib():
+    import ib_insync
+    # util.startLoop()  # uncomment this line when in a notebook
+    ib = ib_insync.IB()
+    ib.connect('127.0.0.1', 4001, clientId=1)
+    contract = ib_insync.Forex('EURUSD')
+    bars = ib.reqHistoricalData(
+        contract, endDateTime='', durationStr='30 D',
+        barSizeSetting='1 hour', whatToShow='MIDPOINT', useRTH=True)
+    # convert to pandas dataframe:
+    df = ib_insync.util.df(bars)
+    print(df)
+
+# collect_news()
 # collect_stocks()
 # restore_news()
+# test_ib()
+import ib
