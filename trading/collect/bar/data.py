@@ -57,7 +57,7 @@ class Bar:
     def open(self):
         return self.iopen / self.FIXED_POINT_MULTIPLIER
     
-    @property.setter
+    @open.setter
     def open(self, value):
         self.iopen = int(value * self.FIXED_POINT_MULTIPLIER)
 
@@ -65,7 +65,7 @@ class Bar:
     def high(self):
         return self.ihigh / self.FIXED_POINT_MULTIPLIER
     
-    @property.setter
+    @high.setter
     def high(self, value):
         self.ihigh = int(value * self.FIXED_POINT_MULTIPLIER)
 
@@ -73,7 +73,7 @@ class Bar:
     def low(self):
         return self.ilow / self.FIXED_POINT_MULTIPLIER
     
-    @property.setter
+    @low.setter
     def low(self, value):
         self.ilow = int(value * self.FIXED_POINT_MULTIPLIER)
 
@@ -81,6 +81,6 @@ class Bar:
     def close(self):
         return self.iclose / self.FIXED_POINT_MULTIPLIER
     
-    @property.setter
+    @close.setter
     def close(self, value):
         self.iclose = int(value * self.FIXED_POINT_MULTIPLIER)

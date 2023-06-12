@@ -1,23 +1,18 @@
 import datetime
 import json
-import requests
 import typing
 
-import twitter.data
+from collect.web import HttpClient
+from collect.social.twitter_engine.data import Tweet, TwitterUser
 
 
 class TwitterScraper:
     AUTHORIZATION = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+    client: HttpClient
+    guest_token: str|None = None
 
-    _session: requests.Session
-    _guest_token: str|None = None
-    _thorttle: datetime.timedelta|None = None
-
-    def __init__(self, warmup: bool = False, user_agent: str|None = None, throttle: datetime.timedelta|None = None):
-        self._session = requests.Session()
-        if user_agent is not None:
-            self._session.headers.update({"User-Agent": user_agent})
-        self._throttle = throttle
+    def __init__(self, client: HttpClient|None = None, warmup: bool = False):
+        self.client = client or HttpClient()
         if warmup:
             self.warmup()
 
@@ -25,24 +20,24 @@ class TwitterScraper:
         self._get_guest_token()
 
     def _get_guest_token(self):
-        if self._guest_token is None:
-            found_response = self._session.get("https://twitter.com/explore")
+        if self.guest_token is None:
+            found_response = self.client.get("https://twitter.com/explore")
             html = found_response.text
             gt_from = html.index("gt=")
             gt_to = html.index(";", gt_from)
-            self._guest_token = html[gt_from+3:gt_to]
-        return self._guest_token
+            self.guest_token = html[gt_from+3:gt_to]
+        return self.guest_token
 
     def _api_call(self, url: str):
         headers = {
             "Authorization": self.AUTHORIZATION,
             "x-guest-token": self._get_guest_token(),
         }
-        response = self._session.get(url, headers=headers)
+        response = self.client.get(url, headers=headers)
         response.raise_for_status()
         return response.json()
 
-    def get_user(self, username: str) -> twitter.data.TwitterUser:
+    def get_user(self, username: str) -> TwitterUser:
         variables = {
             "screen_name": username,
             "withSafetyModeUserFields": True,
@@ -60,7 +55,7 @@ class TwitterScraper:
         response = self._api_call(url)
         rest_id = response["data"]["user"]["result"]["rest_id"]
         legacy_user = response["data"]["user"]["result"]["legacy"]
-        return twitter.data.TwitterUser(
+        return TwitterUser(
             rest_id,
             username,
             legacy_user["name"],
@@ -70,11 +65,12 @@ class TwitterScraper:
         )
 
     def get_tweets(self, username: str, max_count: int|None = None, min_date: datetime.datetime|None = None):
+        user_id = self.get_user(username).rest_id
         result = []
         cursor = None
         if min_date:
             while True:
-                chunk, cursor = self._get_tweets_page(username, cursor=cursor)
+                chunk, cursor = self._get_tweets_page(user_id, cursor=cursor)
                 result.extend(chunk)
                 if not chunk or chunk[-1].created_at < min_date:
                     break
@@ -84,18 +80,17 @@ class TwitterScraper:
                     break
         elif max_count:
             while len(result) < max_count:
-                chunk, cursor = self._get_tweets_page(username, count=max_count-len(result), cursor=cursor)
+                chunk, cursor = self._get_tweets_page(user_id, count=max_count-len(result), cursor=cursor)
                 result.extend(chunk)
                 if not chunk:
                     break
         else:
-            result, _ = self._get_tweets_page(username)
+            result, _ = self._get_tweets_page(user_id)
         if max_count and len(result) > max_count:
             result = result[:max_count]
         return result
 
-    def _get_tweets_page(self, username: str, count: int = 100, cursor: str|None = None) -> typing.Tuple[typing.List[twitter.data.Tweet], str|None]:
-        user_id = self.get_user(username).rest_id
+    def _get_tweets_page(self, user_id: str, count: int = 100, cursor: str|None = None) -> typing.Tuple[typing.List[Tweet], str|None]:
         variables = {
             "userId": user_id,
             "count": count,
@@ -145,7 +140,7 @@ class TwitterScraper:
                     timeline_content = content["itemContent"]
                     tweet_raw = timeline_content["tweet_results"]["result"]
                     legacy_tweet = tweet_raw["legacy"]
-                    result.append(twitter.data.Tweet(
+                    result.append(Tweet(
                         id=tweet_id,
                         created_at=datetime.datetime.strptime(legacy_tweet["created_at"], "%a %B %d %H:%M:%S %z %Y"),
                         text=legacy_tweet["full_text"],

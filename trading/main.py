@@ -128,8 +128,14 @@ def test_ib_own():
         date_format=DateFormat.STRING,
         keep_up_to_date=False)
 
+def browse_collect():
+    from collect.browser.browser import CollectBrowser
+    b = CollectBrowser(env)
+    b.mainloop()
+
 # collect_news()
 # collect_stocks()
 # restore_news()
 # test_ib_insync()
 test_ib_own()
+browse_collect()
