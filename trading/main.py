@@ -92,7 +92,7 @@ def run_engine():
     eng.start_timestamp = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
     task = eng.run()
 
-def test_ib():
+def test_ib_insync():
     import ib_insync
     # util.startLoop()  # uncomment this line when in a notebook
     ib = ib_insync.IB()
@@ -105,8 +105,31 @@ def test_ib():
     df = ib_insync.util.df(bars)
     print(df)
 
+def test_ib_own():
+    from ib.client import IBClient
+    import ibapi.contract
+    from ib.types import Duration, DurationUnit, BarSize, HistoricalDataType, TradingHours, DateFormat
+
+    client = IBClient()
+    client.connect("localhost", 4002, 0)
+    contract = ibapi.contract.Contract()
+    contract.symbol = "EUR"
+    contract.secType = "CASH"
+    contract.currency = "GBP"
+    contract.exchange = "IDEALPRO"
+    client_thread = client.run_in_thread()
+    client.reqHistoricalData(
+        contract=contract,
+        end_datetime=None,
+        duration=Duration(1, DurationUnit.DAY),
+        bar_size=BarSize.MIN_1,
+        data_type=HistoricalDataType.MIDPOINT,
+        trading_hours=TradingHours.REGULAR,
+        date_format=DateFormat.STRING,
+        keep_up_to_date=False)
+
 # collect_news()
 # collect_stocks()
 # restore_news()
-# test_ib()
-import ib
+# test_ib_insync()
+test_ib_own()
