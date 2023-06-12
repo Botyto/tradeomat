@@ -106,11 +106,13 @@ def test_ib_insync():
     print(df)
 
 def test_ib_own():
+    from datetime import timedelta
     from ib.client import IBClient
     import ibapi.contract
     from ib.types import Duration, DurationUnit, BarSize, HistoricalDataType, TradingHours, DateFormat
 
     client = IBClient()
+    client.timeout = timedelta(seconds=5)
     client.connect("localhost", 4002, 0)
     contract = ibapi.contract.Contract()
     contract.symbol = "EUR"
@@ -118,7 +120,7 @@ def test_ib_own():
     contract.currency = "GBP"
     contract.exchange = "IDEALPRO"
     client_thread = client.run_in_thread()
-    client.reqHistoricalData(
+    client.get_historical_data(
         contract=contract,
         end_datetime=None,
         duration=Duration(1, DurationUnit.DAY),
