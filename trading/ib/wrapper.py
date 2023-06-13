@@ -8,10 +8,12 @@ import ibapi.wrapper
 
 class IBError(Exception):
     code: int
+    advanced_order_reject_json: str
 
-    def __init__(self, code: int, message: str):
+    def __init__(self, code: int, message: str, advanced_order_reject_json: str):
         super().__init__(message)
         self.code = code
+        self.advanced_order_reject_json = advanced_order_reject_json
 
 
 class IBWrapper(ibapi.wrapper.EWrapper):
@@ -40,9 +42,10 @@ class IBWrapper(ibapi.wrapper.EWrapper):
     def __instant_set_error(self, request_id: int, error: Exception):
         self._loop.call_soon_threadsafe(self._futures[request_id].set_exception, error)
 
-    def error(self, request_id: int, code: int, message: str):
-        super().error(request_id, code, message)
-        self.__instant_set_error(request_id, IBError(code, message))
+    def error(self, request_id: int, code: int, message: str, advanced_order_reject_json: str = ""):
+        super().error(request_id, code, message, advanced_order_reject_json)
+        if request_id != -1:
+            self.__instant_set_error(request_id, IBError(code, message, advanced_order_reject_json))
 
     def historicalData(self, request_id: int, bar: ibapi.common.BarData):
         super().historicalData(request_id, bar)
