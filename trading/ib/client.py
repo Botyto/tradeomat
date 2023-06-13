@@ -27,9 +27,10 @@ class Request:
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
             return
+        awaited_future = self.future
         if self.timeout:
-            self.future = asyncio.wait_for(self.future, timeout=self.timeout.total_seconds())
-        asyncio.get_event_loop().run_until_complete(self.future)
+            awaited_future = asyncio.wait_for(awaited_future, timeout=self.timeout.total_seconds())
+        asyncio.get_event_loop().run_until_complete(awaited_future)
 
     @property
     def timeout(self):
@@ -41,7 +42,7 @@ class Request:
 
     @property
     def result(self):
-        self.future.result()
+        return self.future.result()
 
 
 class IBClient:
