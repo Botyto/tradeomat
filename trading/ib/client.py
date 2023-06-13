@@ -5,6 +5,7 @@ import typing
 
 import ibapi
 import ibapi.client
+import ibapi.common
 import ibapi.contract
 import ibapi.wrapper
 
@@ -81,7 +82,7 @@ class IBClient:
         trading_hours: ib.types.TradingHours,
         date_format: ib.types.DateFormat,
         keep_up_to_date: bool
-    ):
+    ) -> typing.List[ibapi.common.BarData]:
         with Request(self) as request:
             self._eclient.reqHistoricalData(
                 reqId=request.id,
@@ -96,6 +97,16 @@ class IBClient:
                 chartOptions=ibapi.client.TagValueList())
         return request.result
     
+    def get_contract_details(self, contract: ibapi.contract.Contract) -> ibapi.contract.ContractDetails:
+        with Request(self) as request:
+            self._eclient.reqContractDetails(request.id, contract)
+        return request.result
+
+    def serach_symbols(self, pattern: str) -> typing.List[ibapi.contract.ContractDescription]:
+        with Request(self) as request:
+            self._eclient.reqMatchingSymbols(request.id, pattern)
+        return request.result
+
     def run(self):
         return self._eclient.run()
     

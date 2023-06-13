@@ -1,8 +1,17 @@
 import asyncio
 import typing
 
-from ibapi.common import BarData
+import ibapi.common
+import ibapi.contract
 import ibapi.wrapper
+
+
+class IBError(Exception):
+    code: int
+
+    def __init__(self, code: int, message: str):
+        super().__init__(message)
+        self.code = code
 
 
 class IBWrapper(ibapi.wrapper.EWrapper):
@@ -14,25 +23,43 @@ class IBWrapper(ibapi.wrapper.EWrapper):
         self._futures = futures
         self._temp = {}
 
-    def _temp_list_append(self, request_id: int, item: typing.Any):
-        if request_id not in self._temp:
-            self._temp[request_id] = []
-        self._temp[request_id].append(item)
+    def __temp_list_append(self, request_id: int, item: typing.Any):
+        temp_list = self._temp.get(request_id)
+        if temp_list is None:
+            self._temp[request_id] = [item]
+        else:
+            temp_list.append(item)
 
-    def _set_result_from_temp(self, request_id: int):
-        self._loop.call_soon_threadsafe(self._futures[request_id].set_result, self._temp[request_id])
+    def __temp_set_result(self, request_id: int):
+        self.__instant_set_result(request_id, self._temp[request_id])
         del self._temp[request_id]
 
-    def historicalData(self, request_id: int, bar: BarData):
-        self._temp_list_append(request_id, bar)
+    def __instant_set_result(self, request_id: int, result: typing.Any):
+        self._loop.call_soon_threadsafe(self._futures[request_id].set_result, result)
+
+    def __instant_set_error(self, request_id: int, error: Exception):
+        self._loop.call_soon_threadsafe(self._futures[request_id].set_exception, error)
+
+    def error(self, request_id: int, code: int, message: str):
+        super().error(request_id, code, message)
+        self.__instant_set_error(request_id, IBError(code, message))
+
+    def historicalData(self, request_id: int, bar: ibapi.common.BarData):
+        super().historicalData(request_id, bar)
+        self.__temp_list_append(request_id, bar)
     
     def historicalDataEnd(self, request_id: int, start: str, end: str):
-        self._set_result_from_temp(request_id)
+        super().historicalDataEnd(request_id, start, end)
+        self.__temp_set_result(request_id)
 
-    def logAnswer(self, fnName, fnParams):
-        if 'self' in fnParams:
-            params = dict(fnParams)
-            del params['self']
-        else:
-            params = fnParams
-        print("ANSWER %s %s" % (fnName, params))
+    def contractDetails(self, request_id: int, contract_details: ibapi.contract.ContractDetails):
+        super().contractDetails(request_id, contract_details)
+        self.__instant_set_result(request_id, contract_details)
+
+    def bondContractDetails(self, reqId: int, contractDetails: ibapi.contract.ContractDetails):
+        super().bondContractDetails(reqId, contractDetails)
+        self.__instant_set_result(reqId, contractDetails)
+
+    def symbolSamples(self, reqId: int, contractDescriptions: typing.List[ibapi.contract.ContractDescription]):
+        super().symbolSamples(reqId, contractDescriptions)
+        self.__instant_set_result(reqId, contractDescriptions)
