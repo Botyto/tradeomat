@@ -110,22 +110,27 @@ def test_ib_own():
     from ib.client import IBClient
     import ib.contract
     from ib.types import Duration, DurationUnit, BarSize, HistoricalDataType, TradingHours, DateFormat
+    import logging
+    logging.getLogger("ibapi.wrapper").setLevel(logging.DEBUG)
 
     client = IBClient()
     client.timeout = timedelta(seconds=5)
     client.connect("localhost", 4002, 0)
-    contract = ib.contract.forex("EUR", "GBP")
     client_thread = client.run_in_thread()
-    symbols = client.serach_symbols("EUR")
-    client.get_historical_data(
-        contract=contract,
-        end_datetime=None,
-        duration=Duration(1, DurationUnit.DAY),
-        bar_size=BarSize.MIN_1,
-        data_type=HistoricalDataType.MIDPOINT,
-        trading_hours=TradingHours.REGULAR,
-        date_format=DateFormat.STRING,
-        keep_up_to_date=False)
+    # symbols = client.serach_symbols("EUR")
+    contract = ib.contract.forex("EUR", "GBP")
+    client._eclient.reqMktData(1000, contract, "", False, False, [])
+    client._eclient.cancelMktData(1000)
+    # client.get_historical_data(
+    #     contract=contract,
+    #     end_datetime=None,
+    #     duration=Duration(1, DurationUnit.DAY),
+    #     bar_size=BarSize.MIN_1,
+    #     data_type=HistoricalDataType.MIDPOINT,
+    #     trading_hours=TradingHours.REGULAR,
+    #     date_format=DateFormat.STRING,
+    #     keep_up_to_date=False)
+    client_thread.join()
 
 def browse_collect():
     from collect.browser.browser import CollectBrowser
@@ -137,4 +142,4 @@ def browse_collect():
 # restore_news()
 # test_ib_insync()
 test_ib_own()
-browse_collect()
+# browse_collect()
