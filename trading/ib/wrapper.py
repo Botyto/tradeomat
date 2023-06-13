@@ -44,7 +44,7 @@ class IBWrapper(ibapi.wrapper.EWrapper):
 
     def error(self, request_id: int, code: int, message: str, advanced_order_reject_json: str = ""):
         super().error(request_id, code, message, advanced_order_reject_json)
-        if request_id != -1:
+        if request_id != -1 and request_id in self._futures:
             self.__instant_set_error(request_id, IBError(code, message, advanced_order_reject_json))
 
     def historicalData(self, request_id: int, bar: ibapi.common.BarData):
