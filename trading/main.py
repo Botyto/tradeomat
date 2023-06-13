@@ -108,18 +108,15 @@ def test_ib_insync():
 def test_ib_own():
     from datetime import timedelta
     from ib.client import IBClient
-    import ibapi.contract
+    import ib.contract
     from ib.types import Duration, DurationUnit, BarSize, HistoricalDataType, TradingHours, DateFormat
 
     client = IBClient()
     client.timeout = timedelta(seconds=5)
     client.connect("localhost", 4002, 0)
-    contract = ibapi.contract.Contract()
-    contract.symbol = "EUR"
-    contract.secType = "CASH"
-    contract.currency = "GBP"
-    contract.exchange = "IDEALPRO"
+    contract = ib.contract.forex("EUR", "GBP")
     client_thread = client.run_in_thread()
+    symbols = client.serach_symbols("EUR")
     client.get_historical_data(
         contract=contract,
         end_datetime=None,
