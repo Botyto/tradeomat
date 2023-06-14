@@ -115,12 +115,17 @@ def test_ib_own():
 
     client = IBClient()
     client.timeout = timedelta(seconds=5)
-    client.connect("localhost", 4002, 0)
+    connected = client.autoconnect("localhost", 0)
+    if not connected:
+        print("Failed to connect")
+        return
     client_thread = client.run_in_thread()
     # symbols = client.serach_symbols("EUR")
-    contract = ib.contract.forex("EUR", "GBP")
+    # contract = ib.contract.stock("IBKR", "SMART", "USD")
+    contract = ib.contract.forex("EUR", "USD")
+    # contract_details = client.get_contract_details(contract)
     client._eclient.reqMktData(1000, contract, "", False, False, [])
-    client._eclient.cancelMktData(1000)
+    # client._eclient.cancelMktData(1000)
     # client.get_historical_data(
     #     contract=contract,
     #     end_datetime=None,

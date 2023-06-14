@@ -64,7 +64,15 @@ class IBClient:
         self._eclient.connect(host, 7497, client_id)
 
     def connect(self, host: str, port: int, client_id: int):
-        return self._eclient.connect(host, port, client_id)
+        self._eclient.connect(host, port, client_id)
+        return self._eclient.isConnected()
+    
+    def autoconnect(self, host: str, client_id: int):
+        LIVE_PORTS = [7496, 4002]
+        PAPER_PORTS = [7497, 4001]
+        for port in LIVE_PORTS + PAPER_PORTS:
+            if self.connect(host, port, client_id):
+                return True
     
     def prep_request(self):
         future = asyncio.Future(loop=asyncio.get_event_loop())

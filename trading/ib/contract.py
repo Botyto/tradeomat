@@ -1,9 +1,51 @@
-from ibapi.contract import Contract
+import typing
 
-def __make_contract(**kwargs):
+from ibapi.contract import Contract, ComboLeg
+
+def __make_contract(
+    con_id: int = 0,
+    symbol: str = "",
+    sec_type: str = "",
+    last_traded_date_or_contract_month: str = "",
+    strike: float = 0.0,
+    right: str = "",
+    multiplier: str = "",
+    exchange: str = "",
+    primary_exchange: str = "",
+    currency: str = "",
+    local_symbol: str = "",
+    trading_class: str = "",
+    include_expired: bool = False,
+    sec_id_type: str = "",	  # CUSIP;SEDOL;ISIN;RIC
+    sec_id: str = "",
+    description: str = "",
+    issuer_id: str = "",
+    combo_legs_description: str = "",
+    combo_legs: typing.List[ComboLeg]|None = None,
+    delta_neutral_contract = None,
+):
     contract = Contract()
-    for k, v in kwargs.items():
-        setattr(contract, k, v)
+    contract.conId = con_id
+    contract.symbol = symbol
+    contract.secType = sec_type
+    contract.lastTradeDateOrContractMonth = last_traded_date_or_contract_month
+    contract.strike = strike
+    contract.right = right
+    contract.multiplier = multiplier
+    contract.exchange = exchange
+    assert primary_exchange != "SMART", "Primary exchange cannot be 'SMART'"
+    contract.primaryExchange = primary_exchange
+    contract.currency = currency
+    contract.localSymbol = local_symbol
+    contract.tradingClass = trading_class
+    contract.includeExpired = include_expired
+    contract.secIdType = sec_id_type
+    contract.secId = sec_id
+    contract.description = description
+    contract.issuerId = issuer_id
+    contract.comboLegsDescrip = combo_legs_description
+    contract.comboLegs = combo_legs
+    contract.deltaNeutralContract = delta_neutral_contract
     return contract
 
 def forex(symbol: str, currency: str, exchange: str = "IDEALPRO", **kwargs) -> Contract:
