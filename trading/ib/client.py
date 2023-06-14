@@ -116,6 +116,12 @@ class IBClient:
             self._eclient.reqMatchingSymbols(request.id, pattern)
         return request.result
 
+    def market_data_subscribe(self, contract: ibapi.contract.Contract, snapshot: bool, regulatory_snapshot: bool):
+        self._eclient.reqMktData(request.id, contract, "", snapshot, regulatory_snapshot, [])
+
+    def market_data_unsubscribe(self, contract: ibapi.contract.Contract):
+        pass  # TODO
+
     def run(self):
         return self._eclient.run()
     

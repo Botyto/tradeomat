@@ -184,9 +184,20 @@ class ShortableThresholds(Enum):
     AVAILABLE = 1
     NOT_AVAILABLE = 2
 
-def get_shortable_threshold(value: float):
-    if value > 2.5:
-        return ShortableThresholds.AT_LEAST_10000_SHARES
-    if value > 1.5:
-        return ShortableThresholds.AVAILABLE
-    return ShortableThresholds.NOT_AVAILABLE
+
+class GenericTickType(Enum):
+    OPTION_VOLUME = 100  # currently for stocks
+    OPTION_OPEN_INTEREST = 101  # currently for stocks
+    HISTORICAL_VOLATILITY = 104  # currently for stocks
+    AVERAGE_OPTION_VOLUME = 105  # currently for stocks
+    OPTION_IMPLIED_VOLATILITY = 106  # currently for stocks
+    INDEX_FUTURE_PREMIUM = 162
+    MISCELLANEOUS_STATS = 165 
+    MARK_PRICE = 221  # used in TWS P&L computations
+    AUCTION_VALUES = 225  # volume, price and imbalance
+    RTVOLUME = 233  # contains the last trade price, last trade size, last trade time, total volume, VWAP, and single trade flag.
+    SHORTABLE = 236
+    INVENTORY = 256
+    FUNDAMENTAL_RATIOS = 258
+    REALTIME_HISTORICAL_VOLATILITY = 411
+    IBDIVIDENDS = 456
