@@ -124,7 +124,7 @@ def test_ib_own():
     # contract = ib.contract.stock("IBKR", "SMART", "USD")
     contract = ib.contract.forex("EUR", "USD")
     # contract_details = client.get_contract_details(contract)
-    client._eclient.reqMktData(1000, contract, "", False, False, [])
+    bar_stream = client.market_data_subscribe(contract)
     # client._eclient.cancelMktData(1000)
     # client.get_historical_data(
     #     contract=contract,
@@ -135,6 +135,10 @@ def test_ib_own():
     #     trading_hours=TradingHours.REGULAR,
     #     date_format=DateFormat.STRING,
     #     keep_up_to_date=False)
+    async def get_bars(bar_stream):
+        async for bar in bar_stream:
+            print(bar)
+    client.loop.run_until_complete(get_bars(bar_stream))
     client_thread.join()
 
 def browse_collect():
