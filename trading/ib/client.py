@@ -19,7 +19,7 @@ import ib.wrapper
 class RequestType(Enum):
     EMPTY = 0
     WITH_FUTURE = 1
-    WITH_QUEUE = 2
+    WITH_STREAM = 2
 
 
 class Request:
@@ -34,8 +34,8 @@ class Request:
     def __enter__(self):
         if self._type == RequestType.WITH_FUTURE:
             self.id = self._client._new_request_with_future()
-        elif self._type == RequestType.WITH_QUEUE:
-            self.id = self._client._new_request_with_queue()
+        elif self._type == RequestType.WITH_STREAM:
+            self.id = self._client._new_request_with_stream()
         else:
             self.id = self._client._new_request()
         return self
@@ -99,10 +99,10 @@ class IBClient:
         self.results[request_id] = future
         return request_id
     
-    def _new_request_with_queue(self):
+    def _new_request_with_stream(self):
         request_id = self._new_request()
-        queue = asyncio.Queue()
-        self.results[request_id] = queue
+        stream = ib.stream.AsyncStream()
+        self.results[request_id] = stream
         return request_id
 
     def get_historical_data(
@@ -141,14 +141,14 @@ class IBClient:
         return request.result
 
     def market_data_subscribe(self, contract: ibapi.contract.Contract, generic_ticks: typing.Iterable[ib.types.GenericTickType]|None = None) -> ib.stream.BarStream:
-        with Request(self, RequestType.WITH_QUEUE) as request:
+        with Request(self, RequestType.WITH_STREAM) as request:
             generic_ticks_str = ",".join(gtick.value for gtick in generic_ticks) if generic_ticks else ""
             self._eclient.reqMktData(request.id, contract, generic_ticks_str, False, False, ibapi.common.TagValueList())
         return ib.stream.BarStream(request.id, request.result)
 
     def market_data_unsubscribe(self, stream_id: int):
-        queue: asyncio.Queue = self.results[stream_id]
-        self.loop.call_soon_threadsafe(queue.put, None)
+        stream: ib.stream.AsyncStream = self.results[stream_id]
+        self.loop.call_soon_threadsafe(stream.end)
         del self.results[stream_id]
         self._wrapper.tick_subscription_cancelled(stream_id)
 

@@ -7,9 +7,8 @@ import ibapi.common
 import ibapi.contract
 import ibapi.wrapper
 
-from ib.stream import Bar
-from ib.types import ShortableThresholds, TickHaltedType
-from ib.types import TickPriceType, TickSizeType, TickGenericType
+from ib.stream import Bar, AsyncStream
+from ib.types import TickPriceType, TickSizeType
 
 
 class IBError(Exception):
@@ -86,12 +85,12 @@ class IBWrapper(ibapi.wrapper.EWrapper):
             self._temp[request_id] = bar
         return bar
 
-    def __tick_publish_bar(self, request_id: int):
+    def __tick_push_bar(self, request_id: int):
         bar: Bar = self._temp.get(request_id)
         if bar is None:
             return
-        queue: asyncio.Queue = self._results[request_id]
-        self._loop.call_soon_threadsafe(queue.put, bar)
+        stream: AsyncStream = self._results[request_id]
+        self._loop.call_soon_threadsafe(stream.push, bar)
         new_bar = Bar()
         new_bar.open = bar.close
         self._temp[request_id] = new_bar
@@ -102,9 +101,10 @@ class IBWrapper(ibapi.wrapper.EWrapper):
     def tickPrice(self, request_id: int, tick_type: int, price: float, attrib: ibapi.common.TickAttrib):
         super().tickPrice(request_id, tick_type, price, attrib)
         bar = self.__tick_get_bar(request_id)
-        current_time = datetime.now().replace(second=0, microsecond=0)
+        current_time = datetime.utcnow().replace(second=0, microsecond=0)
         if current_time > bar.datetime:
-            self.__tick_publish_bar(request_id)
+            self.__tick_push_bar(request_id)
+        print(TickPriceType(tick_type))
         match TickPriceType(tick_type):
             case TickPriceType.LAST_PRICE:
                 bar.close = Decimal(price)

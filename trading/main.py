@@ -109,7 +109,8 @@ def test_ib_own():
     from datetime import timedelta
     from ib.client import IBClient
     import ib.contract
-    from ib.types import Duration, DurationUnit, BarSize, HistoricalDataType, TradingHours, DateFormat
+    import ib.stream
+    import ib.types
     import logging
     logging.getLogger("ibapi.wrapper").setLevel(logging.DEBUG)
 
@@ -135,8 +136,8 @@ def test_ib_own():
     #     trading_hours=TradingHours.REGULAR,
     #     date_format=DateFormat.STRING,
     #     keep_up_to_date=False)
-    async def get_bars(bar_stream):
-        async for bar in bar_stream:
+    async def get_bars(bar_stream: ib.stream.BarStream):
+        async for bar in bar_stream.stream:
             print(bar)
     client.loop.run_until_complete(get_bars(bar_stream))
     client_thread.join()

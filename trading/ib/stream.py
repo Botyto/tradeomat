@@ -16,19 +16,35 @@ class Bar:
         self.volume = Decimal(0.0)
 
 
-class BarStream:
-    id: int
-    queue: asyncio.Queue[Bar]
+class AsyncStream:
+    _queue: asyncio.Queue
+    ended: bool
 
-    def __init__(self, id: int, queue: asyncio.Queue[Bar]):
-        self.id = id
-        self.queue = queue
+    def __init__(self):
+        self._queue = asyncio.Queue()
+        self.ended = False
 
-    async def __aiter__(self):
+    def end(self):
+        self.ended = True
+
+    def push(self, item):
+        if self.ended:
+            raise RuntimeError('Cannot enqueue to an ended stream')
+        self._queue.put_nowait(item)
+
+    def __aiter__(self):
         return self
 
     async def __anext__(self):
-        result = await self.queue.get()
-        if result is None:
+        if self.ended and self._queue.empty():
             raise StopAsyncIteration
-        return result
+        return await self._queue.get()
+
+
+class BarStream:
+    id: int
+    stream: AsyncStream
+
+    def __init__(self, id: int, stream: AsyncStream):
+        self.id = id
+        self.stream = stream
